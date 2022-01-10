@@ -2,7 +2,7 @@ require 'aws-sdk-s3'
 require 'avro'
 require 'active_support/time'
 
-module HeapRS3Segment
+module AmplitudeRS3Segment
   class Loader
     AWS_S3_DEFAULT_REGION = 'us-east-1'
 
@@ -60,7 +60,7 @@ module HeapRS3Segment
     end
 
     def logger
-      HeapRS3Segment.logger
+      AmplitudeRS3Segment.logger
     end
 
     def scan_manifests
@@ -191,7 +191,7 @@ module HeapRS3Segment
     def parse_time(time)
       Time.zone.parse(time).utc
     end
-    
+
     def parse_heap_timestamp(value)
       return unless value
       Time.at(value / 1_000_000).utc.iso8601
@@ -207,12 +207,12 @@ module HeapRS3Segment
       heap_user_id = hash.delete('user_id')
       {
         anonymous_id: wrap_cookie(heap_user_id),
-        message_id: "HEAP|#{hash.delete('event_id')}",
+        message_id: "AMPLITUDE|#{hash.delete('event_id')}",
         timestamp: parse_time(hash.delete('time')),
         context: {
           'ip' => (hash.delete('ip') || hash.delete('browser_ip')),
           'library' => {
-            'name' => 'HeapIntegration',
+            'name' => 'AmplitudeIntegration',
             'version' => '1.0'
           }
         },

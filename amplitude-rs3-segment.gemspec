@@ -1,19 +1,19 @@
-require File.expand_path('../lib/heap-rs3-segment/version', __FILE__)
+require File.expand_path('../lib/amplitude-rs3-segment/version', __FILE__)
 
 Gem::Specification.new do |gem|
-  gem.authors       = ['Troex Nevelin (Sergey B)']
-  gem.email         = ['troex@upserver24.com']
-  gem.summary       = 'HEAP Retrospective S3 to Segment processor'
-  gem.description   = 'Reads HEAP Retrospective S3 Syncs from AWS S3 buckets and process it as Segment events'
+  gem.authors       = ['Maxim Sadovsky']
+  gem.email         = ['maksim@attributionapp.com']
+  gem.summary       = 'Amplitude Retrospective S3 to Segment processor'
+  gem.description   = 'Reads Amplitude Retrospective S3 Syncs from AWS S3 buckets and process it as Segment events'
   gem.homepage      = 'https://attributionapp.com'
   gem.license       = 'MIT'
 
-  gem.executables   = ['heap-rs3-segment']
+  gem.executables   = ['amplitude-rs3-segment']
   gem.files         = `git ls-files | grep -Ev '^(test|myapp|examples)'`.split("\n")
   gem.test_files    = []
-  gem.name          = 'heap-rs3-segment'
+  gem.name          = 'amplitude-rs3-segment'
   gem.require_paths = ['lib']
-  gem.version       = HeapRS3Segment::VERSION
+  gem.version       = AmplitudeRS3Segment::VERSION
   gem.required_ruby_version = '>= 2.2.2'
 
   gem.add_dependency 'avro'

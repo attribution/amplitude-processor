@@ -1,7 +1,7 @@
 require 'time'
 require 'logger'
 
-module HeapRS3Segment
+module AmplitudeRS3Segment
   module Logging
     class Pretty < Logger::Formatter
       def call(severity, time, program_name, message)
