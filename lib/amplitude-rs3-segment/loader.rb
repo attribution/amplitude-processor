@@ -6,11 +6,9 @@ module AmplitudeRS3Segment
   class Loader
     AWS_S3_DEFAULT_REGION = 'us-east-1'
 
-    attr_accessor :processor, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync,
-      :identify_only_users, :revenue_mapping, :revenue_fallback, :user_id_prop,
-      :skip_types, :skip_tables, :skip_before
+    attr_accessor :processor, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
 
-    def initialize(processor, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, aws_region=nil)
+    def initialize(processor, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, dir='', aws_region=nil)
       Time.zone = 'UTC'
       @alias_cache = {}
 
@@ -27,17 +25,11 @@ module AmplitudeRS3Segment
 
       @prompt = true
       @process_single_sync = true # stops after one sync is processed
-      @skip_types = [] # [:page, :track, :identify, :alias]
-      @skip_tables = ['sessions']
       @skip_before = nil
-      @identify_only_users = false # this is useful when doing initial import and we don't need to identify anonymous users
-      @revenue_mapping = {}
-      @revenue_fallback = []
-      @user_id_prop = 'identity'
     end
 
     def call
-      scan_manifests.each do |obj|
+      scan_files.each do |obj|
         already_synced = begin
           @s3.head_object({ bucket: @aws_s3_bucket, key: "imported_#{obj.key}" }) && true
         rescue Aws::S3::Errors::NotFound
@@ -54,7 +46,7 @@ module AmplitudeRS3Segment
           next if already_synced
         end
 
-        process_sync(obj)
+        process_file(obj)
         break if @process_single_sync
       end
     end
@@ -63,13 +55,13 @@ module AmplitudeRS3Segment
       AmplitudeRS3Segment.logger
     end
 
-    def scan_manifests
+    def scan_files
       list_opts = { bucket: @aws_s3_bucket, prefix: @aws_s3_bucket_prefix, delimiter: '/' }
       resp = @s3.list_objects_v2(list_opts)
-      resp.contents.select { |obj| obj.key.match(MANIFEST_REGEXP) }.sort_by(&:key)
+      resp.contents.select { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
     end
 
-    def mark_manifest_as_synced(obj)
+    def mark_file_as_synced(obj)
       @s3.copy_object(
         copy_source: "#{@aws_s3_bucket}/#{obj.key}",
         bucket: @aws_s3_bucket,
@@ -77,79 +69,7 @@ module AmplitudeRS3Segment
       )
     end
 
-    def process_sync(obj)
-      start_time = Time.now.utc
-      manifest = get_manifest(obj)
-      process_manifest(manifest)
-      mark_manifest_as_synced(obj)
-
-      diff = Time.now.utc - start_time
-      logger.info "Done syncing #{obj.key} in #{diff.to_i} seconds"
-    end
-
-    def get_manifest(obj)
-      logger.info "Reading #{obj.key}"
-
-      manifest = s3_get_file(obj)
-      JSON.parse(manifest.body.read)
-    end
-
-    def process_manifest(manifest)
-      logger.info "Processing manifest(dump_id: #{manifest['dump_id']})"
-
-      # skip tables we don't need, e.g. "sessions"
-      tables = manifest['tables'].reject { |table| @skip_tables.include?(table['name']) }
-
-      # custom sorter - aliases, any events then pageviews, finally identify
-      index_type_name = ->(table) {
-        idx_type = case table['name']
-        when 'user_migrations' then [1, :alias]
-        when 'pageviews' then [3, :page]
-        when 'users' then [4, :identify]
-        else [2, :track]
-        end
-        idx_type << table['name']
-      }
-      tables.sort_by!(&index_type_name)
-
-      tables.each do |table|
-        table['type'] = index_type_name.call(table)[1]
-        logger.info "Order key #{index_type_name.call(table)}"
-      end
-
-      tables.each do |table|
-        process_table(table)
-      end
-    end
-
-    def process_table(table)
-      event_name = table['name'].split('_').map(&:capitalize).join(' ')
-      logger.info "Processing table(#{table['name']}) - \"#{event_name}\" event"
-
-      files = table['files'].sort
-
-      if ['users', 'user_migrations'].include?(table['name'])
-        files.sort_by! do |path|
-          filename = path.split('/').last
-          filename.split('_').first.to_i
-        end
-      end
-
-      files.each do |file|
-        next if @skip_types.include?(table['type'])
-        process_file(file, table['type'], event_name)
-      end
-    end
-
-    def process_file(file, type, event_name)
-      # TODO selective file skip
-      # if match = file.match(/pageviews\/part-(\d+)/)
-      #   if match[1].to_i < 800 || match[1].to_i >= 900
-      #     logger.info "Skipping file(#{file})"
-      #     return
-      #   end
-      # end
-
+    def process_file(file)
       logger.info "Processing file(#{file})"
 
       load_start_time = Time.now.utc
