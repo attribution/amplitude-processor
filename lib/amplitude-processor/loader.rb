@@ -26,7 +26,7 @@ module AmplitudeProcessor
       @s3_dir = s3_dir
 
       @prompt = false
-      @process_single_sync = true # stops after one sync is processed
+      @process_single_sync = false # stops after one sync is processed
       @skip_before = nil
     end
 
@@ -75,22 +75,24 @@ module AmplitudeProcessor
       logger.info "Processing file(#{obj.key})"
 
       load_start_time = Time.now.utc
-      reader = Zlib::GzipReader.new(obj.stream)
+      file_obj = @s3.get_object({ bucket: @aws_s3_bucket, key: obj.key })
+      reader = Zlib::GzipReader.new(file_obj.body)
       load_diff = Time.now.utc - load_start_time
 
       counter = 0
       skipped = 0
       start_time = Time.now.utc # we start timer after file is read from S3
 
-      JSON.parse(reader.read).each do |hash|
+      reader.each_line do |line|
         # TODO sample raw logger
         # if counter % 10_000 == 0
         # if counter == 0
         #   logger.info hash.inspect
         # end
+        hash = JSON.parse(line)
+        next if hash.empty?
 
-
-        identify(hash) if hash['user_properties'].present?
+        identify(hash) if hash['user_id'] && hash['user_properties'].present?
 
         result = case hash['event_type']
         when 'Loaded a Page', /^Viewed .* Page$/
@@ -118,13 +120,13 @@ module AmplitudeProcessor
     end
 
     def common_payload(hash)
-      amplitude_id = hash.delete('amplitude_id')
+      amplitude_id = hash['amplitude_id']
       {
         anonymous_id: wrap_cookie(amplitude_id),
-        message_id: "AMPLITUDE|#{hash.delete('event_id')}",
-        timestamp: parse_time(hash.delete('event_time')),
+        message_id: "AMPLITUDE|#{hash['event_id']}",
+        timestamp: parse_time(hash['event_time']),
         context: {
-          'ip' => hash.delete('ip_address'),
+          'ip' => hash['ip_address'],
           'library' => {
             'name' => 'AmplitudeIntegration',
             'version' => VERSION
@@ -166,7 +168,7 @@ module AmplitudeProcessor
       payload = common_payload(hash)
       return if skip_before?(payload[:timestamp])
 
-      payload[:user_id] = hash['user_id'].presence || raise
+      payload[:user_id] = hash['user_id'].presence || raise('No user_id in identify()')
       payload[:traits] = hash['user_properties']
 
       @processor.identify(payload)
