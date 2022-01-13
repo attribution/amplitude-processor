@@ -1,4 +1,4 @@
-module AmplitudeRS3Segment
+module AmplitudeProcessor
   module Processors
     class Segment
       attr_accessor :analytics, :max_queue_size
@@ -14,11 +14,11 @@ module AmplitudeRS3Segment
       def check_flush_queue!
         if @analytics.queued_messages >= @max_queue_size
           t = Time.now
-          AmplitudeRS3Segment.logger.info "Max queue size reached - #{@analytics.queued_messages}, flushing"
+          AmplitudeProcessor.logger.info "Max queue size reached - #{@analytics.queued_messages}, flushing"
           @analytics.flush
           diff = Time.now - t
           rate = (@max_queue_size / diff).to_i
-          AmplitudeRS3Segment.logger.info "Flush done in #{diff} seconds (#{rate} req/sec), continue"
+          AmplitudeProcessor.logger.info "Flush done in #{diff} seconds (#{rate} req/sec), continue"
         end
       end
 

@@ -2,7 +2,7 @@ require 'aws-sdk-s3'
 require 'avro'
 require 'active_support/time'
 
-module AmplitudeRS3Segment
+module AmplitudeProcessor
   class Loader
     AWS_S3_DEFAULT_REGION = 'us-east-1'
 
@@ -52,7 +52,7 @@ module AmplitudeRS3Segment
     end
 
     def logger
-      AmplitudeRS3Segment.logger
+      AmplitudeProcessor.logger
     end
 
     def scan_files

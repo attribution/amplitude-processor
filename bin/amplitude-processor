@@ -33,9 +33,9 @@ Segment::Analytics::Defaults::Request::HOST = ENV['TRACKING_ENDPOINT']
 Segment::Analytics::Defaults::MessageBatch::MAX_BYTES = 5_120_000 # 5 Mb
 # Segment::Analytics::Defaults::MessageBatch::MAX_SIZE  = 1_000
 
-require 'amplitude-rs3-segment'
+require 'amplitude-processor'
 
-processor = AmplitudeRS3Segment::Processors::Segment.new(
+processor = AmplitudeProcessor::Processors::Segment.new(
   write_key: project_id,
   on_error: Proc.new { |status, msg| print msg },
   max_queue_size: 10_000,
@@ -43,7 +43,7 @@ processor = AmplitudeRS3Segment::Processors::Segment.new(
   # stub: true
 )
 
-AmplitudeRS3Segment::Loader.new(
+AmplitudeProcessor::Loader.new(
   processor,
   project_id,
   aws_s3_bucket,
