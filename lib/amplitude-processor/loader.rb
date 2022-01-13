@@ -1,6 +1,8 @@
 require 'aws-sdk-s3'
 require 'avro'
+require 'active_support'
 require 'active_support/time'
+# require 'active_support/testing/time_helpers'
 
 module AmplitudeProcessor
   class Loader
