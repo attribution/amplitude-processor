@@ -98,7 +98,8 @@ describe AmplitudeProcessor::Loader do
         "$quantity"=>1,
         "$price"=>99.0
       },
-      :event=>'Invoice Paid'
+      :event=>'Invoice Paid',
+      :user_id=> '3762'
     } }
 
     it 'sends track' do

@@ -146,6 +146,7 @@ module AmplitudeProcessor
 
       payload[:event] = hash['event_type']
       payload[:properties].merge!(hash['event_properties'].reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
+      payload[:user_id] = hash['user_id'] if hash['user_id']
 
       @processor.track(payload)
     end
@@ -155,6 +156,7 @@ module AmplitudeProcessor
       return if skip_before?(payload[:timestamp])
 
       payload[:name] = hash['event_type']
+      payload[:user_id] = hash['user_id'] if hash['user_id']
 
       payload[:properties] = hash['event_properties']
       @processor.page(payload)
