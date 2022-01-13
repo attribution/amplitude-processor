@@ -68,7 +68,7 @@ describe AmplitudeProcessor::Loader do
         "referrer"=>"https://www.google.ru/",
         "path"=>"/privacy/"
       },
-      :name=>nil
+      :name=>'Loaded a Page'
     } }
 
     it 'sends page' do
@@ -98,7 +98,7 @@ describe AmplitudeProcessor::Loader do
         "$quantity"=>1,
         "$price"=>99.0
       },
-      :event=>nil
+      :event=>'Invoice Paid'
     } }
 
     it 'sends track' do

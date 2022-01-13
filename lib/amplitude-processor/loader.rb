@@ -145,7 +145,7 @@ module AmplitudeProcessor
       payload = common_payload(hash)
       return if skip_before?(payload[:timestamp])
 
-      payload[:event] = hash['event_name']
+      payload[:event] = hash['event_type']
       payload[:properties].merge!(hash['event_properties'].reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
 
       @processor.track(payload)
@@ -155,7 +155,7 @@ module AmplitudeProcessor
       payload = common_payload(hash)
       return if skip_before?(payload[:timestamp])
 
-      payload[:name] = hash['event_name']
+      payload[:name] = hash['event_type']
 
       payload[:properties] = hash['event_properties']
       @processor.page(payload)
