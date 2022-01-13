@@ -4,7 +4,6 @@ require 'amplitude-processor/processors/segment'
 
 module AmplitudeProcessor
   FILE_REGEXP = /.+\.json.gz$/.freeze
-  MANIFEST_BUCKET_PREFIX = 'manifests/sync_'.freeze
 
   def self.logger
     AmplitudeProcessor::Logging.logger

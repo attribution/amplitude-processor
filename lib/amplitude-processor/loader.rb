@@ -4,11 +4,12 @@ require 'active_support/time'
 
 module AmplitudeProcessor
   class Loader
-    AWS_S3_DEFAULT_REGION = 'us-east-1'
+    AWS_S3_DEFAULT_REGION = 'us-east-1'.freeze
+    UTC_TIMEZONE = Time.find_zone('UTC').freeze
 
     attr_accessor :processor, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
 
-    def initialize(processor, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, dir='', aws_region=nil)
+    def initialize(processor, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, s3_dir='', aws_region=nil)
       Time.zone = 'UTC'
       @alias_cache = {}
 
@@ -21,7 +22,7 @@ module AmplitudeProcessor
         region: aws_region || AWS_S3_DEFAULT_REGION
       )
       @aws_s3_bucket = aws_s3_bucket
-      @aws_s3_bucket_prefix = MANIFEST_BUCKET_PREFIX
+      @s3_dir = s3_dir
 
       @prompt = true
       @process_single_sync = true # stops after one sync is processed
@@ -30,20 +31,20 @@ module AmplitudeProcessor
 
     def call
       scan_files.each do |obj|
-        already_synced = begin
-          @s3.head_object({ bucket: @aws_s3_bucket, key: "imported_#{obj.key}" }) && true
+        already_imported = begin
+          @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}/imported/#{obj.key}" }) && true
         rescue Aws::S3::Errors::NotFound
           nil
         end
 
-        next if already_synced
+        next if already_imported
 
         if @prompt
           require 'pry'
           logger.debug 'Ready to process ' + obj.key + ', type "exit!" to interrupt, "already_synced = true" to skip this sync, set @skip_types to skip certian event types and CTRL-D to continue'
           binding.pry
 
-          next if already_synced
+          next if already_imported
         end
 
         process_file(obj)
@@ -56,46 +57,45 @@ module AmplitudeProcessor
     end
 
     def scan_files
-      list_opts = { bucket: @aws_s3_bucket, prefix: @aws_s3_bucket_prefix, delimiter: '/' }
+      list_opts = { bucket: @aws_s3_bucket, prefix: @s3_dir, delimiter: '/' }
       resp = @s3.list_objects_v2(list_opts)
       resp.contents.select { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
     end
 
-    def mark_file_as_synced(obj)
-      @s3.copy_object(
-        copy_source: "#{@aws_s3_bucket}/#{obj.key}",
+    def mark_file_as_imported(obj)
+      @s3.put_object(
         bucket: @aws_s3_bucket,
-        key: "imported_#{obj.key}"
+        key: "#{@s3_dir}/imported/#{obj.key}",
+        body: ''
       )
     end
 
-    def process_file(file)
-      logger.info "Processing file(#{file})"
+    def process_file(obj)
+      logger.info "Processing file(#{obj.key})"
 
       load_start_time = Time.now.utc
-      s3_file = s3_get_file(file)
-      reader = Avro::IO::DatumReader.new
-      avro = Avro::DataFile::Reader.new(s3_file.body, reader)
+      reader = Zlib::GzipReader.new(obj.stream)
       load_diff = Time.now.utc - load_start_time
 
       counter = 0
       skipped = 0
       start_time = Time.now.utc # we start timer after file is read from S3
 
-      avro.each do |hash|
+      JSON.parse(reader.read).each do |hash|
         # TODO sample raw logger
         # if counter % 10_000 == 0
         # if counter == 0
         #   logger.info hash.inspect
         # end
 
-        result = case type
-        when :track
-          track(hash, event_name)
-        when :alias
-          store_alias(hash)
+
+        identify(hash) if hash['user_properties'].present?
+
+        result = case hash['event_type']
+        when 'Loaded a Page', /^Viewed .* Page$/
+          page(hash)
         else
-          send(type, hash)
+          track(hash)
         end
 
         skipped += 1 if result.nil?
@@ -109,35 +109,28 @@ module AmplitudeProcessor
     end
 
     def parse_time(time)
-      Time.zone.parse(time).utc
+      UTC_TIMEZONE.parse(time).utc
     end
 
-    def parse_heap_timestamp(value)
-      return unless value
-      Time.at(value / 1_000_000).utc.iso8601
-    rescue
-      value
-    end
-
-    def wrap_cookie(heap_user_id)
-      heap_user_id ? "#{@project_identifier}|#{resolve_heap_user(heap_user_id)}" : nil
+    def wrap_cookie(amplitude_id)
+      amplitude_id ? "#{@project_identifier}|#{amplitude_id}" : nil
     end
 
     def common_payload(hash)
-      heap_user_id = hash.delete('user_id')
+      amplitude_id = hash.delete('amplitude_id')
       {
-        anonymous_id: wrap_cookie(heap_user_id),
+        anonymous_id: wrap_cookie(amplitude_id),
         message_id: "AMPLITUDE|#{hash.delete('event_id')}",
-        timestamp: parse_time(hash.delete('time')),
+        timestamp: parse_time(hash.delete('event_time')),
         context: {
-          'ip' => (hash.delete('ip') || hash.delete('browser_ip')),
+          'ip' => hash.delete('ip_address'),
           'library' => {
             'name' => 'AmplitudeIntegration',
-            'version' => '1.0'
+            'version' => VERSION
           }
         },
         properties: {
-          'heap_user_id' => heap_user_id
+          'amplitude_user_id' => amplitude_id
         }
       }
     end
@@ -166,102 +159,11 @@ module AmplitudeProcessor
       payload = common_payload(hash)
       return if skip_before?(payload[:timestamp])
 
-      payload[:name] = 'Loaded a Page'
+      payload[:name] = hash['event_name']
 
-      # TODO detect mobile and send screen event instead
-      url = case hash['library']
-      when 'web'
-        'http://' + hash.values_at('domain', 'path', 'query', 'hash').join
-      when 'ios', 'android'
-        "#{hash['library']}-app://" + hash.values_at('app_name', 'view_controller').compact.join('/')
-      else
-        'unknown://' + hash['event_id']
-      end
-
-      payload[:properties] = {
-        'referrer' => hash.delete('previous_page') || hash.delete('referrer'),
-        'title' => hash.delete('title'),
-        'url' => url,
-        'session_referrer' => hash.delete('referrer')
-      }
+      payload[:properties] = hash['event_properties']
 
       @processor.page(payload)
     end
-
-    def identify(hash)
-      heap_user_id = hash.delete('user_id')
-      email = hash.delete('email') || hash.delete('_email')
-      identity = hash.delete('identity')
-
-      # common workaround for heap? email used as identity
-      if email.nil? && identity && identity.include?('@')
-        email = identity
-      end
-
-      # uses email as USER_ID or sets it to null (if email is empty)
-      if @user_id_prop == 'email'
-        identity = email
-      end
-
-      payload = {
-        anonymous_id: wrap_cookie(heap_user_id),
-        user_id: identity,
-        traits: {
-          'email' => email,
-          'identity' => identity,
-          'heap_user_id' => heap_user_id,
-          'join_date' => parse_heap_timestamp(hash.delete('joindate')),
-          'last_modified' => parse_heap_timestamp(hash.delete('last_modified'))
-        }.reject { |_, v| v.nil? }
-      }
-
-      payload[:traits] = hash.reject { |_, v| v.nil? }.merge(payload[:traits])
-
-      return if @identify_only_users && payload[:user_id].nil?
-
-      @processor.identify(payload)
-    end
-
-    def alias(hash)
-      payload = {
-        previous_id: wrap_cookie(hash['from_user_id']),
-        anonymous_id: wrap_cookie(hash['to_user_id'])
-      }
-
-      @processor.alias(payload)
-    end
-
-    def store_alias(hash)
-      @alias_cache[hash['from_user_id']] = hash['to_user_id']
-    end
-
-    def resolve_heap_user(heap_user_id)
-      @alias_cache[heap_user_id] || heap_user_id
-    end
-
-    def s3uri_to_hash(s3uri)
-      raise ArgumentError unless s3uri[0..4] == 's3://'
-
-      bucket, key = s3uri[5..-1].split('/', 2)
-      { bucket: bucket, key: key }
-    end
-
-    def s3_get_file(obj)
-      hash = case obj
-      when String
-        s3uri_to_hash(obj)
-      when Aws::S3::Types::Object
-        { bucket: @aws_s3_bucket, key: obj.key }
-      when Hash
-        obj
-      else
-        {}
-      end
-
-      raise ArgumentError unless hash.has_key?(:bucket) && hash.has_key?(:key)
-
-      @s3.get_object(hash)
-    end
-
   end
 end
