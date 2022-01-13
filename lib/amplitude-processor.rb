@@ -3,8 +3,6 @@ require 'amplitude-processor/loader'
 require 'amplitude-processor/processors/segment'
 
 module AmplitudeProcessor
-  FILE_REGEXP = /.+\.json.gz$/.freeze
-
   def self.logger
     AmplitudeProcessor::Logging.logger
   end

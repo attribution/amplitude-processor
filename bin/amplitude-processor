@@ -17,7 +17,7 @@ if ENV['ROLLBAR_ACCESS_TOKEN']
   end
 end
 
-project_id, aws_s3_bucket, *_ = ARGV
+project_id, aws_s3_bucket, s3_dir, *_ = ARGV
 
 # ENV fallback
 project_id ||= ENV['PROJECT_ID']
@@ -48,5 +48,6 @@ AmplitudeProcessor::Loader.new(
   project_id,
   aws_s3_bucket,
   ENV['AWS_ACCESS_KEY_ID'],
-  ENV['AWS_SECRET_ACCESS_KEY']
+  ENV['AWS_SECRET_ACCESS_KEY'],
+  s3_dir
 ).call

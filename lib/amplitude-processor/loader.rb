@@ -6,6 +6,7 @@ module AmplitudeProcessor
   class Loader
     AWS_S3_DEFAULT_REGION = 'us-east-1'.freeze
     UTC_TIMEZONE = Time.find_zone('UTC').freeze
+    FILE_REGEXP = /.+\.json.gz$/.freeze
 
     attr_accessor :processor, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
 
@@ -24,7 +25,7 @@ module AmplitudeProcessor
       @aws_s3_bucket = aws_s3_bucket
       @s3_dir = s3_dir
 
-      @prompt = true
+      @prompt = false
       @process_single_sync = true # stops after one sync is processed
       @skip_before = nil
     end
@@ -32,7 +33,7 @@ module AmplitudeProcessor
     def call
       scan_files.each do |obj|
         already_imported = begin
-          @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}/imported/#{obj.key}" }) && true
+          @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}/imported/#{File.basename(obj.key)}" }) && true
         rescue Aws::S3::Errors::NotFound
           nil
         end
@@ -65,7 +66,7 @@ module AmplitudeProcessor
     def mark_file_as_imported(obj)
       @s3.put_object(
         bucket: @aws_s3_bucket,
-        key: "#{@s3_dir}/imported/#{obj.key}",
+        key: "#{@s3_dir}/imported/#{File.basename(obj.key)}",
         body: ''
       )
     end
