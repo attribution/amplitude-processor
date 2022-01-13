@@ -141,18 +141,12 @@ module AmplitudeProcessor
       @skip_before && timestamp < @skip_before
     end
 
-    def track(hash, event_name)
+    def track(hash)
       payload = common_payload(hash)
       return if skip_before?(payload[:timestamp])
 
-      payload[:event] = event_name
-      payload[:properties].merge!(hash.reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
-
-      if revenue_field = @revenue_mapping[event_name]
-        payload[:properties]['revenue'] ||= hash.delete(revenue_field.to_s)
-      else @revenue_fallback.any?
-        payload[:properties]['revenue'] ||= hash.values_at(*@revenue_fallback).compact.first
-      end
+      payload[:event] = hash['event_name']
+      payload[:properties].merge!(hash['event_properties'].reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
 
       @processor.track(payload)
     end
@@ -164,8 +158,17 @@ module AmplitudeProcessor
       payload[:name] = hash['event_name']
 
       payload[:properties] = hash['event_properties']
-
       @processor.page(payload)
+    end
+
+    def identify(hash)
+      payload = common_payload(hash)
+      return if skip_before?(payload[:timestamp])
+
+      payload[:user_id] = hash['user_id'].presence || raise
+      payload[:traits] = hash['user_properties']
+
+      @processor.identify(payload)
     end
   end
 end
