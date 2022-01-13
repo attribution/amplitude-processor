@@ -36,11 +36,6 @@ module AmplitudeProcessor
         check_flush_queue!
         @analytics.page(attrs)
       end
-
-      def alias(attrs)
-        check_flush_queue!
-        @analytics.alias(attrs)
-      end
     end
   end
 end
