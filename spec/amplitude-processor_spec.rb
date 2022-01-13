@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe AmplitudeProcessor::Loader do
   let(:loader) { described_class.new(processor, 'project_identifier', 'aws_s3_bucket', 'aws_access_key_id', 'aws_secret_access_key') }
-  let(:processor) { instance_double(AmplitudeProcessor::Processors::Segment) }
+  let(:processor) { AmplitudeProcessor::Processors::Null.new }
 
   before do
     allow(Aws::S3::Client).to receive(:new)

@@ -24,6 +24,7 @@ module AmplitudeProcessor
       )
       @aws_s3_bucket = aws_s3_bucket
       @s3_dir = s3_dir
+      @s3_dir += '/' unless @s3_dir.end_with?('/')
 
       @prompt = false
       @process_single_sync = false # stops after one sync is processed
@@ -49,6 +50,7 @@ module AmplitudeProcessor
         end
 
         process_file(obj)
+        mark_file_as_imported(obj)
         break if @process_single_sync
       end
     end
@@ -66,7 +68,7 @@ module AmplitudeProcessor
     def mark_file_as_imported(obj)
       @s3.put_object(
         bucket: @aws_s3_bucket,
-        key: "#{@s3_dir}/imported/#{File.basename(obj.key)}",
+        key: "#{@s3_dir}imported/#{File.basename(obj.key)}",
         body: ''
       )
     end
