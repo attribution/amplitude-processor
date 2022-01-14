@@ -34,7 +34,7 @@ module AmplitudeProcessor
     def call
       scan_files.each do |obj|
         already_imported = begin
-          @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}/imported/#{File.basename(obj.key)}" }) && true
+          @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}imported/#{File.basename(obj.key)}" }) && true
         rescue Aws::S3::Errors::NotFound
           nil
         end
