@@ -100,7 +100,7 @@ module AmplitudeProcessor
         hash = JSON.parse(line)
         next if hash.empty?
 
-        identify(hash) if hash['user_id'] && hash['user_properties'].present?
+        identify(hash) if hash['user_properties'].present?
 
         result = case hash['event_type']
         when 'Loaded a Page', /^Viewed .* Page$/
@@ -176,8 +176,10 @@ module AmplitudeProcessor
       payload = common_payload(hash)
       return if skip_before?(payload[:timestamp])
 
-      payload[:user_id] = hash['user_id'].presence || raise('No user_id in identify()')
+      payload[:user_id] = hash['user_id'] if hash['user_id']
       payload[:traits] = hash['user_properties']
+
+      raise 'user_id or anonymous_id must be present' if payload[:user_id].nil? && payload[:anonymous_id].nil?
 
       @processor.identify(payload)
     end
