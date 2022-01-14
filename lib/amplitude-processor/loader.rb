@@ -61,8 +61,14 @@ module AmplitudeProcessor
 
     def scan_files
       list_opts = { bucket: @aws_s3_bucket, prefix: @s3_dir, delimiter: '/' }
-      resp = @s3.list_objects_v2(list_opts)
-      resp.contents.select { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
+      all_objects = []
+      loop do
+        resp = @s3.list_objects_v2(list_opts)
+        all_objects += resp.contents
+        break if resp.next_continuation_token.nil?
+        list_opts[:continuation_token] = resp.next_continuation_token
+      end
+      all_objects.select { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
     end
 
     def mark_file_as_imported(obj)
