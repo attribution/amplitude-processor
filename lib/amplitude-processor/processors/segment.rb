@@ -1,3 +1,5 @@
+require 'segment/analytics'
+
 module AmplitudeProcessor
   module Processors
     class Segment
