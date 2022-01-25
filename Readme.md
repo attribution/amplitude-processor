@@ -1,6 +1,7 @@
 ### Test run:
 
 ```ruby
+require 'bundler/setup'
 require 'amplitude-processor'
 require 'amplitude-processor/loader'
 require 'amplitude-processor/processors/console'
