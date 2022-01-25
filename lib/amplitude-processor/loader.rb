@@ -55,6 +55,7 @@ module AmplitudeProcessor
         true
         break if @process_single_sync
       end
+      @processor.flush
     end
 
     def logger
@@ -114,8 +115,6 @@ module AmplitudeProcessor
         skipped += 1 if result.nil?
         counter += 1
       end
-
-      @processor.flush
 
       diff = Time.now.utc - start_time
       if diff > 0
