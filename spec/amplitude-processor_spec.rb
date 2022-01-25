@@ -8,7 +8,7 @@ describe AmplitudeProcessor::Loader do
     allow(Aws::S3::Client).to receive(:new)
   end
 
-  describe '#identify' do
+  context 'when user has properties' do
     subject { loader.identify(hash) }
 
     let(:hash) { JSON.parse(File.read('spec/fixtures/with_user_properties.json')) }
@@ -47,7 +47,7 @@ describe AmplitudeProcessor::Loader do
     end
   end
 
-  describe '#page' do
+  context 'when page event' do
     subject { loader.page(hash) }
 
     let(:hash) { JSON.parse(File.read('spec/fixtures/page.json')) }
@@ -77,7 +77,7 @@ describe AmplitudeProcessor::Loader do
     end
   end
 
-  describe '#track' do
+  context 'when track event' do
     subject { loader.track(hash) }
 
     let(:hash) { JSON.parse(File.read('spec/fixtures/track.json')) }
