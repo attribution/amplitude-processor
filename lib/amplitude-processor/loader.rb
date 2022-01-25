@@ -63,9 +63,11 @@ module AmplitudeProcessor
     def scan_files
       list_opts = { bucket: @aws_s3_bucket, prefix: @s3_dir, delimiter: '/' }
       all_objects = []
-      while (resp = @s3.list_objects_v2(list_opts)).next_continuation_token.present?
+      loop do
+        resp = @s3.list_objects_v2(list_opts)
         all_objects += resp.contents
         list_opts[:continuation_token] = resp.next_continuation_token
+        break unless resp.next_continuation_token.present?
       end
       all_objects.select { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
     end
