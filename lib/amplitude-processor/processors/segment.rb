@@ -38,6 +38,10 @@ module AmplitudeProcessor
         check_flush_queue!
         @analytics.page(attrs)
       end
+
+      def flush
+        @analytics.flush
+      end
     end
   end
 end

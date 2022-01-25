@@ -12,6 +12,10 @@ module AmplitudeProcessor
       def page(attrs)
         true
       end
+
+      def flush
+        true
+      end
     end
   end
 end

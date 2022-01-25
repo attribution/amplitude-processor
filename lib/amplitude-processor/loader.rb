@@ -115,6 +115,8 @@ module AmplitudeProcessor
         counter += 1
       end
 
+      @processor.flush
+
       diff = Time.now.utc - start_time
       if diff > 0
         logger.info "Done. Loading #{load_diff.to_i}s, processing #{diff.to_i}s, #{counter} rows, #{skipped} skipped (#{(counter / diff).to_i} rows/sec)"

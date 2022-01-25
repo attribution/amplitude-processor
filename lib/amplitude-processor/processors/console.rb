@@ -18,6 +18,11 @@ module AmplitudeProcessor
         puts '=== Page:'
         pp attrs
       end
+
+      def flush
+        puts '====================================='
+        puts '=== Flush:'
+      end
     end
   end
 end
