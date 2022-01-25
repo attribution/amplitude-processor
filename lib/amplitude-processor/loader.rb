@@ -1,6 +1,7 @@
 require 'aws-sdk-s3'
 require 'active_support'
 require 'active_support/time'
+require_relative 'version'
 
 module AmplitudeProcessor
   class Loader
