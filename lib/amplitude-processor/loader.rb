@@ -11,7 +11,7 @@ module AmplitudeProcessor
 
     attr_accessor :processor, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
 
-    def initialize(processor, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, s3_dir='', aws_region=nil)
+    def initialize(processor, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, aws_region=nil)
       Time.zone = 'UTC'
       @alias_cache = {}
 
@@ -24,46 +24,37 @@ module AmplitudeProcessor
         region: aws_region || AWS_S3_DEFAULT_REGION
       )
       @aws_s3_bucket = aws_s3_bucket
-      @s3_dir = s3_dir
-      @s3_dir += '/' unless @s3_dir.end_with?('/')
 
       @prompt = false
       @process_single_sync = false # stops after one sync is processed
       @skip_before = nil
     end
 
-    def call
-      scan_files.each do |obj|
-        already_imported = begin
-          @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}imported/#{File.basename(obj.key)}" }) && true
-        rescue Aws::S3::Errors::NotFound
-          nil
-        end
+    def call(s3_dir='')
+      s3_dir += '/' unless s3_dir.end_with?('/')
 
-        next if already_imported
-
+      scan_files(s3_dir).each do |obj|
         if @prompt
           require 'pry'
           logger.debug 'Ready to process ' + obj.key + ', type "exit!" to interrupt, "already_synced = true" to skip this sync, set @skip_types to skip certian event types and CTRL-D to continue'
           binding.pry
-
-          next if already_imported
         end
 
         process_file(obj)
-        mark_file_as_imported(obj)
-        true
+        mark_file_as_imported(obj, s3_dir)
         break if @process_single_sync
       end
       @processor.flush
     end
 
+    private
+
     def logger
       AmplitudeProcessor.logger
     end
 
-    def scan_files
-      list_opts = { bucket: @aws_s3_bucket, prefix: @s3_dir, delimiter: '/' }
+    def scan_files(s3_dir)
+      list_opts = { bucket: @aws_s3_bucket, prefix: s3_dir, delimiter: '/' }
       all_objects = []
       loop do
         resp = @s3.list_objects_v2(list_opts)
@@ -71,13 +62,20 @@ module AmplitudeProcessor
         list_opts[:continuation_token] = resp.next_continuation_token
         break unless resp.next_continuation_token.present?
       end
-      all_objects.select { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
+
+      all_objects.select! { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
+      all_objects.select! do |obj|
+        @s3.head_object({ bucket: @aws_s3_bucket, key: "#{s3_dir}imported/#{File.basename(obj.key)}" })
+        false
+      rescue Aws::S3::Errors::NotFound
+        true
+      end
     end
 
-    def mark_file_as_imported(obj)
+    def mark_file_as_imported(obj, s3_dir)
       @s3.put_object(
         bucket: @aws_s3_bucket,
-        key: "#{@s3_dir}imported/#{File.basename(obj.key)}",
+        key: "#{s3_dir}imported/#{File.basename(obj.key)}",
         body: ''
       )
     end
@@ -95,17 +93,15 @@ module AmplitudeProcessor
       start_time = Time.now.utc # we start timer after file is read from S3
 
       reader.each_line do |line|
-        # TODO sample raw logger
-        # if counter % 10_000 == 0
-        # if counter == 0
-        #   logger.info hash.inspect
-        # end
         hash = JSON.parse(line)
         next if hash.empty?
 
         identify(hash) if hash['user_properties'].present?
 
         result = case hash['event_type']
+        when nil
+          # This is not an event
+          send_alias(hash) if hash['merged_amplitude_id'].present?
         when 'Loaded a Page', /^Viewed .* Page$/
           page(hash)
         else
@@ -185,6 +181,16 @@ module AmplitudeProcessor
       raise 'user_id or anonymous_id must be present' if payload[:user_id].nil? && payload[:anonymous_id].nil?
 
       @processor.identify(payload)
+    end
+
+    # https://help.amplitude.com/hc/en-us/articles/4416687674779-Export-Amplitude-data-to-Redshift#redshift-export-format
+    def send_alias(hash)
+      payload = {
+        anonymous_id: hash['amplitude_id'],
+        previous_id: hash['merged_amplitude_id']
+      }
+
+      @processor.alias(payload)
     end
   end
 end
