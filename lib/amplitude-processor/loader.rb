@@ -47,6 +47,50 @@ module AmplitudeProcessor
       @processor.flush
     end
 
+    def track(hash)
+      payload = common_payload(hash)
+      return if skip_before?(payload[:timestamp])
+
+      payload[:event] = hash['event_type']
+      payload[:properties].merge!(hash['event_properties'].reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
+      payload[:user_id] = hash['user_id'] if hash['user_id']
+
+      @processor.track(payload)
+    end
+
+    def page(hash)
+      payload = common_payload(hash)
+      return if skip_before?(payload[:timestamp])
+
+      payload[:name] = hash['event_type']
+      payload[:user_id] = hash['user_id'] if hash['user_id']
+
+      payload[:properties] = hash['event_properties']
+      @processor.page(payload)
+    end
+
+    def identify(hash)
+      payload = common_payload(hash)
+      return if skip_before?(payload[:timestamp])
+
+      payload[:user_id] = hash['user_id'] if hash['user_id']
+      payload[:traits] = hash['user_properties']
+
+      raise 'user_id or anonymous_id must be present' if payload[:user_id].nil? && payload[:anonymous_id].nil?
+
+      @processor.identify(payload)
+    end
+
+    # https://help.amplitude.com/hc/en-us/articles/4416687674779-Export-Amplitude-data-to-Redshift#redshift-export-format
+    def send_alias(hash)
+      payload = {
+        anonymous_id: hash['amplitude_id'],
+        previous_id: hash['merged_amplitude_id']
+      }
+
+      @processor.alias(payload)
+    end
+
     private
 
     def logger
@@ -70,6 +114,7 @@ module AmplitudeProcessor
       rescue Aws::S3::Errors::NotFound
         true
       end
+      all_objects
     end
 
     def mark_file_as_imported(obj)
@@ -147,50 +192,6 @@ module AmplitudeProcessor
 
     def skip_before?(timestamp)
       @skip_before && timestamp < @skip_before
-    end
-
-    def track(hash)
-      payload = common_payload(hash)
-      return if skip_before?(payload[:timestamp])
-
-      payload[:event] = hash['event_type']
-      payload[:properties].merge!(hash['event_properties'].reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
-      payload[:user_id] = hash['user_id'] if hash['user_id']
-
-      @processor.track(payload)
-    end
-
-    def page(hash)
-      payload = common_payload(hash)
-      return if skip_before?(payload[:timestamp])
-
-      payload[:name] = hash['event_type']
-      payload[:user_id] = hash['user_id'] if hash['user_id']
-
-      payload[:properties] = hash['event_properties']
-      @processor.page(payload)
-    end
-
-    def identify(hash)
-      payload = common_payload(hash)
-      return if skip_before?(payload[:timestamp])
-
-      payload[:user_id] = hash['user_id'] if hash['user_id']
-      payload[:traits] = hash['user_properties']
-
-      raise 'user_id or anonymous_id must be present' if payload[:user_id].nil? && payload[:anonymous_id].nil?
-
-      @processor.identify(payload)
-    end
-
-    # https://help.amplitude.com/hc/en-us/articles/4416687674779-Export-Amplitude-data-to-Redshift#redshift-export-format
-    def send_alias(hash)
-      payload = {
-        anonymous_id: hash['amplitude_id'],
-        previous_id: hash['merged_amplitude_id']
-      }
-
-      @processor.alias(payload)
     end
   end
 end
