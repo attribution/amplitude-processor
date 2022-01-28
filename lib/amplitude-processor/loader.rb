@@ -84,8 +84,8 @@ module AmplitudeProcessor
     # https://help.amplitude.com/hc/en-us/articles/4416687674779-Export-Amplitude-data-to-Redshift#redshift-export-format
     def send_alias(hash)
       payload = {
-        anonymous_id: hash['amplitude_id'],
-        previous_id: hash['merged_amplitude_id']
+        anonymous_id: wrap_cookie(hash['amplitude_id']),
+        previous_id: wrap_cookie(hash['merged_amplitude_id'])
       }
 
       @processor.alias(payload)
