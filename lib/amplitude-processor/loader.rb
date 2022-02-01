@@ -33,7 +33,7 @@ module AmplitudeProcessor
     end
 
     def call
-      scan_files.each do |obj|
+      find_new_files.each do |obj|
         if @prompt
           require 'pry'
           logger.debug 'Ready to process ' + obj.key + ', type "exit!" to interrupt, "already_synced = true" to skip this sync, set @skip_types to skip certian event types and CTRL-D to continue'
@@ -97,24 +97,27 @@ module AmplitudeProcessor
       AmplitudeProcessor.logger
     end
 
-    def scan_files
+    def find_new_files
       list_opts = { bucket: @aws_s3_bucket, prefix: @s3_dir, delimiter: '/' }
-      all_objects = []
+      all_files = []
       loop do
         resp = @s3.list_objects_v2(list_opts)
-        all_objects += resp.contents
+        all_files += resp.contents
         list_opts[:continuation_token] = resp.next_continuation_token
         break unless resp.next_continuation_token.present?
       end
 
-      all_objects.select! { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
-      all_objects.select! do |obj|
+      all_files.select! { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
+      except_imported(all_files)
+    end
+
+    def except_imported(files)
+      files.select do |obj|
         @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}imported/#{File.basename(obj.key)}" })
         false
       rescue Aws::S3::Errors::NotFound
         true
       end
-      all_objects
     end
 
     def mark_file_as_imported(obj)
