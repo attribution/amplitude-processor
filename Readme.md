@@ -4,11 +4,11 @@
 require 'bundler/setup'
 require 'amplitude-processor'
 require 'amplitude-processor/loader'
-require 'amplitude-processor/processors/console'
+require 'amplitude-processor/senders/console'
 
-processor = AmplitudeProcessor::Processors::Console.new
+processor = AmplitudeProcessor::Senders::Console.new
 AmplitudeProcessor::Loader.new(
-  processor,
+  sender,
   'project_id',
   'attribution-amplitude-test',
   ENV['AWS_ACCESS_KEY_ID'],

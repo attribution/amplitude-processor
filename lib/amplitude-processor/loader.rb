@@ -9,13 +9,13 @@ module AmplitudeProcessor
     UTC_TIMEZONE = Time.find_zone('UTC').freeze
     FILE_REGEXP = /.+\.json.gz$/.freeze
 
-    attr_accessor :processor, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
+    attr_accessor :sender, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
 
-    def initialize(processor, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, s3_dir='', aws_region=nil)
+    def initialize(sender, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, s3_dir='', aws_region=nil)
       Time.zone = 'UTC'
       @alias_cache = {}
 
-      @processor = processor
+      @sender = sender
       @project_identifier = project_identifier
 
       @s3 = Aws::S3::Client.new(
@@ -44,7 +44,7 @@ module AmplitudeProcessor
         mark_file_as_imported(obj)
         break if @process_single_sync
       end
-      @processor.flush
+      @sender.flush
     end
 
     def track(hash)
@@ -55,7 +55,7 @@ module AmplitudeProcessor
       payload[:properties].merge!(hash['event_properties'].reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
       payload[:user_id] = hash['user_id'] if hash['user_id']
 
-      @processor.track(payload)
+      @sender.track(payload)
     end
 
     def page(hash)
@@ -66,7 +66,7 @@ module AmplitudeProcessor
       payload[:user_id] = hash['user_id'] if hash['user_id']
 
       payload[:properties] = hash['event_properties']
-      @processor.page(payload)
+      @sender.page(payload)
     end
 
     def identify(hash)
@@ -78,7 +78,7 @@ module AmplitudeProcessor
 
       raise 'user_id or anonymous_id must be present' if payload[:user_id].nil? && payload[:anonymous_id].nil?
 
-      @processor.identify(payload)
+      @sender.identify(payload)
     end
 
     # https://help.amplitude.com/hc/en-us/articles/4416687674779-Export-Amplitude-data-to-Redshift#redshift-export-format
@@ -88,7 +88,7 @@ module AmplitudeProcessor
         previous_id: wrap_cookie(hash['merged_amplitude_id'])
       }
 
-      @processor.alias(payload)
+      @sender.alias(payload)
     end
 
     private

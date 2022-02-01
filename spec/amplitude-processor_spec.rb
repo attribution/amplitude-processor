@@ -1,8 +1,8 @@
 require 'spec_helper'
 
 describe AmplitudeProcessor::Loader do
-  let(:loader) { described_class.new(processor, 'project_identifier', 'aws_s3_bucket', 'aws_access_key_id', 'aws_secret_access_key') }
-  let(:processor) { AmplitudeProcessor::Processors::Null.new }
+  let(:loader) { described_class.new(sender, 'project_identifier', 'aws_s3_bucket', 'aws_access_key_id', 'aws_secret_access_key') }
+  let(:sender) { AmplitudeProcessor::Senders::Null.new }
 
   before do
     allow(Aws::S3::Client).to receive(:new)
@@ -42,7 +42,7 @@ describe AmplitudeProcessor::Loader do
     } }
 
     it 'sends identify' do
-      expect(processor).to receive(:identify).with(expected_payload)
+      expect(sender).to receive(:identify).with(expected_payload)
       subject
     end
   end
@@ -72,7 +72,7 @@ describe AmplitudeProcessor::Loader do
     } }
 
     it 'sends page' do
-      expect(processor).to receive(:page).with(expected_payload)
+      expect(sender).to receive(:page).with(expected_payload)
       subject
     end
   end
@@ -103,7 +103,7 @@ describe AmplitudeProcessor::Loader do
     } }
 
     it 'sends track' do
-      expect(processor).to receive(:track).with(expected_payload)
+      expect(sender).to receive(:track).with(expected_payload)
       subject
     end
   end

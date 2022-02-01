@@ -1,5 +1,5 @@
 module AmplitudeProcessor
-  module Processors
+  module Senders
     class Null
       def track(attrs)
         true
