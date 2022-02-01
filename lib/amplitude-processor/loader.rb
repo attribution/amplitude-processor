@@ -33,7 +33,13 @@ module AmplitudeProcessor
     end
 
     def call
-      find_new_files.each do |obj|
+      new_files = find_new_files
+      if new_files.empty?
+        puts "No new files found at #{@s3_dir}"
+        return
+      end
+
+      new_files.each do |obj|
         if @prompt
           require 'pry'
           logger.debug 'Ready to process ' + obj.key + ', type "exit!" to interrupt, "already_synced = true" to skip this sync, set @skip_types to skip certian event types and CTRL-D to continue'
