@@ -113,7 +113,8 @@ module AmplitudeProcessor
         break unless resp.next_continuation_token.present?
       end
 
-      all_files.select! { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
+      all_files.select! { |obj| obj.key.match(FILE_REGEXP) }
+      all_files.sort_by!(&:key)
       except_imported(all_files)
     end
 
