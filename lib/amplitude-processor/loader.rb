@@ -185,7 +185,7 @@ module AmplitudeProcessor
       amplitude_id = hash['amplitude_id']
       {
         anonymous_id: wrap_cookie(amplitude_id),
-        message_id: "AMPLITUDE|#{hash['event_id']}",
+        message_id: "AMPLITUDE|#{hash['uuid']}",
         timestamp: parse_time(hash['event_time']),
         context: {
           'ip' => hash['ip_address'],

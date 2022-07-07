@@ -14,7 +14,7 @@ describe AmplitudeProcessor::Loader do
     let(:hash) { JSON.parse(File.read('spec/fixtures/with_user_properties.json')) }
     let(:expected_payload) { {
       :anonymous_id=>"project_identifier|343954024786",
-      :message_id=>"AMPLITUDE|740920720",
+      :message_id=>"AMPLITUDE|508e4a9e-72c5-11ec-b741-02833e729e33",
       :timestamp=>Time.parse('2022-01-11 10:00:28.675000000 +0000'),
       :context=>{
         "ip"=>nil,
@@ -53,7 +53,7 @@ describe AmplitudeProcessor::Loader do
     let(:hash) { JSON.parse(File.read('spec/fixtures/page.json')) }
     let(:expected_payload) { {
       :anonymous_id=>"project_identifier|346630956846",
-      :message_id=>"AMPLITUDE|963956373",
+      :message_id=>"AMPLITUDE|94fd9096-72c5-11ec-8424-0a0503ad65cb",
       :timestamp=>Time.parse('2022-01-11 10:02:23.085000000 +0000'),
       :context=> {
         "ip"=>"172.226.50.20",
@@ -83,7 +83,7 @@ describe AmplitudeProcessor::Loader do
     let(:hash) { JSON.parse(File.read('spec/fixtures/track.json')) }
     let(:expected_payload) { {
       :anonymous_id=>"project_identifier|343960393583",
-      :message_id=>"AMPLITUDE|894128063",
+      :message_id=>"AMPLITUDE|a845ed08-72c5-11ec-8362-06e339fa9735",
       :timestamp=>Time.parse('2022-01-11 10:02:56.808000000 +0000'),
       :context=>{
         "ip"=>nil,
