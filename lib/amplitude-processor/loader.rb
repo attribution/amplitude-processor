@@ -178,7 +178,7 @@ module AmplitudeProcessor
     end
 
     def wrap_cookie(amplitude_id)
-      amplitude_id ? "#{@project_identifier}|#{amplitude_id}" : nil
+      amplitude_id ? "AMPLITUDE|#{@project_identifier}|#{amplitude_id}" : nil
     end
 
     def common_payload(hash)
