@@ -11,7 +11,7 @@ module AmplitudeProcessor
 
     attr_accessor :sender, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
 
-    def initialize(sender, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, s3_dir='', aws_region=nil)
+    def initialize(sender, project_identifier, aws_s3_bucket, aws_access_key_id, aws_secret_access_key, s3_dir: '', aws_region: nil, revenue_field: 'revenue')
       Time.zone = 'UTC'
       @alias_cache = {}
 
@@ -26,6 +26,8 @@ module AmplitudeProcessor
       @aws_s3_bucket = aws_s3_bucket
       @s3_dir = s3_dir
       @s3_dir += '/' unless @s3_dir.end_with?('/')
+
+      @revenue_field = revenue_field
 
       @prompt = false
       @process_single_sync = false # stops after one sync is processed
@@ -60,6 +62,8 @@ module AmplitudeProcessor
       payload[:event] = hash['event_type']
       payload[:properties].merge!(hash['event_properties'].reject { |_, v| v.nil? || v.to_s.bytesize > 200 })
       payload[:user_id] = hash['user_id'] if hash['user_id']
+
+      payload[:properties]['revenue'] = hash['event_properties'][@revenue_field] if hash['event_properties'][@revenue_field]
 
       @sender.track(payload)
     end

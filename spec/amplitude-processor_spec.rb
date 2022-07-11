@@ -1,8 +1,10 @@
 require 'spec_helper'
 
 describe AmplitudeProcessor::Loader do
-  let(:loader) { described_class.new(sender, 'project_identifier', 'aws_s3_bucket', 'aws_access_key_id', 'aws_secret_access_key') }
+  let(:loader) { described_class.new(sender, 'project_identifier', 'aws_s3_bucket', 'aws_access_key_id', 'aws_secret_access_key', **more_args) }
   let(:sender) { AmplitudeProcessor::Senders::Null.new }
+
+  let(:more_args) { {} }
 
   before do
     allow(Aws::S3::Client).to receive(:new)
@@ -93,18 +95,29 @@ describe AmplitudeProcessor::Loader do
         }},
       :properties=>{
         "amplitude_user_id"=>343960393583,
-        "revenue"=>"99.00",
-        "$revenue"=>99.0,
+        "revenue"=>expected_revenue,
+        "$revenue"=>98.0,
         "$quantity"=>1,
         "$price"=>99.0
       },
       :event=>'Invoice Paid',
       :user_id=> '3762'
     } }
+    let(:expected_revenue) { "99.00" }
 
     it 'sends track' do
       expect(sender).to receive(:track).with(expected_payload)
       subject
+    end
+
+    context 'when using custom revenue field' do
+      let(:more_args) { { revenue_field: '$revenue' } }
+      let(:expected_revenue) { 98.0 }
+
+      it 'is used instead for revenue' do
+        expect(sender).to receive(:track).with(expected_payload)
+        subject
+      end
     end
   end
 end

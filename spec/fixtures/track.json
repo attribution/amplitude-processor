@@ -28,7 +28,7 @@
   "dma": null,
   "event_properties": {
     "revenue": "99.00",
-    "$revenue": 99.0,
+    "$revenue": 98.0,
     "$quantity": 1,
     "$price": 99.0,
     "$revenueType": null,
