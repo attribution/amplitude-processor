@@ -113,7 +113,8 @@ module AmplitudeProcessor
         break unless resp.next_continuation_token.present?
       end
 
-      all_files.select! { |obj| obj.key.match(FILE_REGEXP) }.sort_by(&:key)
+      all_files.select! { |obj| obj.key.match(FILE_REGEXP) }
+      all_files.sort_by!(&:key)
       except_imported(all_files)
     end
 
@@ -177,14 +178,14 @@ module AmplitudeProcessor
     end
 
     def wrap_cookie(amplitude_id)
-      amplitude_id ? "#{@project_identifier}|#{amplitude_id}" : nil
+      amplitude_id ? "AMPLITUDE|#{@project_identifier}|#{amplitude_id}" : nil
     end
 
     def common_payload(hash)
       amplitude_id = hash['amplitude_id']
       {
         anonymous_id: wrap_cookie(amplitude_id),
-        message_id: "AMPLITUDE|#{hash['event_id']}",
+        message_id: "AMPLITUDE|#{hash['uuid']}",
         timestamp: parse_time(hash['event_time']),
         context: {
           'ip' => hash['ip_address'],
