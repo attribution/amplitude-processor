@@ -7,7 +7,7 @@ module AmplitudeProcessor
   class Loader
     AWS_S3_DEFAULT_REGION = 'us-east-1'.freeze
     UTC_TIMEZONE = Time.find_zone('UTC').freeze
-    FILE_REGEXP = /.+\.json.gz$/.freeze
+    FILE_REGEXP = /.+\.json(.gz)?$/.freeze  # "*.json" or "*.json.gz" files
 
     attr_accessor :sender, :project_identifier, :aws_s3_bucket, :prompt, :process_single_sync, :skip_before
 
@@ -157,7 +157,11 @@ module AmplitudeProcessor
 
       load_start_time = Time.now.utc
       file_obj = @s3.get_object({ bucket: @aws_s3_bucket, key: obj.key })
-      reader = Zlib::GzipReader.new(file_obj.body)
+      reader = if obj.key.end_with?('.gz')
+        Zlib::GzipReader.new(file_obj.body)
+      else
+        file_obj.body
+      end
       load_diff = Time.now.utc - load_start_time
 
       counter = 0
