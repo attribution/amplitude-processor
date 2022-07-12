@@ -123,12 +123,25 @@ module AmplitudeProcessor
     end
 
     def except_imported(files)
-      files.select do |obj|
-        @s3.head_object({ bucket: @aws_s3_bucket, key: "#{@s3_dir}imported/#{File.basename(obj.key)}" })
-        false
-      rescue Aws::S3::Errors::NotFound
-        true
+      already_imported = already_imported_names
+      files.reject { |obj| already_imported.include?(File.basename(obj.key)) }
+    end
+
+    # Already processed files are stored in `imported/` subdirectory
+    # as zero-length files of the same name.
+    def already_imported_names
+      list_opts = { bucket: @aws_s3_bucket, prefix: "#{@s3_dir}imported/", delimiter: '/' }
+      all_files = []
+      loop do
+        resp = @s3.list_objects_v2(list_opts)
+        all_files += resp.contents
+        list_opts[:continuation_token] = resp.next_continuation_token
+        break unless resp.next_continuation_token.present?
       end
+
+      all_files.select! { |obj| obj.key.match(FILE_REGEXP) }
+      all_files.map! { |obj| File.basename(obj.key) }
+      all_files
     end
 
     def mark_file_as_imported(obj)
