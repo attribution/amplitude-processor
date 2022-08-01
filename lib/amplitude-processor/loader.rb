@@ -85,6 +85,8 @@ module AmplitudeProcessor
 
       payload[:user_id] = hash['user_id'] if hash['user_id']
       payload[:traits] = hash['user_properties']
+      payload[:traits] ||= {}
+      payload[:traits]['amplitude_user_id'] ||= hash['amplitude_id']
 
       raise 'user_id or anonymous_id must be present' if payload[:user_id].nil? && payload[:anonymous_id].nil?
 

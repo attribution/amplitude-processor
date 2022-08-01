@@ -41,7 +41,9 @@ describe AmplitudeProcessor::Loader do
           "created_at"=>"2021-05-26T13:36:55Z",
           "subscription_status"=>"active",
           "email"=>"tom.petley@imaginehalo.com",
-          "id"=>"4174"}
+          "id"=>"4174",
+          "amplitude_user_id"=>343954024786
+        }
       } }
 
       it 'sends identify' do
