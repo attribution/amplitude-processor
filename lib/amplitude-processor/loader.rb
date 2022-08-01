@@ -209,10 +209,10 @@ module AmplitudeProcessor
         message_id: "AMPLITUDE|#{hash['uuid']}",
         timestamp: parse_time(hash['event_time']),
         context: {
-          'ip' => hash['ip_address'],
-          'library' => {
-            'name' => 'AmplitudeIntegration',
-            'version' => VERSION
+          ip: hash['ip_address'],
+          library: {
+            name: 'AmplitudeIntegration',
+            version: VERSION
           }
         },
         properties: {

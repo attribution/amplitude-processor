@@ -20,10 +20,10 @@ describe AmplitudeProcessor::Loader do
         :message_id=>"AMPLITUDE|508e4a9e-72c5-11ec-b741-02833e729e33",
         :timestamp=>Time.parse('2022-01-11 10:00:28.675000000 +0000'),
         :context=>{
-          "ip"=>nil,
-          "library"=>{
-            "name"=>"AmplitudeIntegration",
-            "version"=>"0.1.0"
+          :ip =>nil,
+          :library =>{
+            :name =>"AmplitudeIntegration",
+            :version =>"0.1.0"
           }},
         :properties=>{"amplitude_user_id"=>343954024786},
         :user_id=>"4174",
@@ -59,10 +59,10 @@ describe AmplitudeProcessor::Loader do
         :message_id=>"AMPLITUDE|94fd9096-72c5-11ec-8424-0a0503ad65cb",
         :timestamp=>Time.parse('2022-01-11 10:02:23.085000000 +0000'),
         :context=> {
-          "ip"=>"172.226.50.20",
-          "library"=>{
-            "name"=>"AmplitudeIntegration",
-            "version"=>"0.1.0"
+          :ip =>"172.226.50.20",
+          :library =>{
+            :name =>"AmplitudeIntegration",
+            :version =>"0.1.0"
           }
         },
         :properties=>{
@@ -89,10 +89,10 @@ describe AmplitudeProcessor::Loader do
         :message_id=>"AMPLITUDE|a845ed08-72c5-11ec-8362-06e339fa9735",
         :timestamp=>Time.parse('2022-01-11 10:02:56.808000000 +0000'),
         :context=>{
-          "ip"=>nil,
-          "library"=>{
-            "name"=>"AmplitudeIntegration",
-            "version"=>"0.1.0"
+          :ip =>nil,
+          :library =>{
+            :name =>"AmplitudeIntegration",
+            :version =>"0.1.0"
           }},
         :properties=>{
           "amplitude_user_id"=>343960393583,
